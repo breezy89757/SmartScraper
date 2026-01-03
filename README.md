@@ -46,7 +46,7 @@ SmartScraper 能夠應對多種不同的網頁結構：
 
 | 類型 | 網站 | 展示 |
 |------|------|------|
-| **列表 (List)** | PTT 八卦版 | ![PTT Demo](images/demo_ptt.png) <br> *自動處理 18+ 驗證與列表爬取* |
+| **列表 (List)** | PTT 八卦版 | ![PTT Demo](images/demo_ptt.png) <br> *自動處理列表爬取* |
 | **表格 (Grid)** | GitHub Trending | ![GitHub Demo](images/demo_github.png) <br> *精準抓取專案與星數* |
 | **單頁 (Single)** | iThome 新聞 | ![iThome Demo](images/demo_ithome.png) <br> *提取內文與發布時間* |
 
@@ -59,6 +59,26 @@ SmartScraper 能夠應對多種不同的網頁結構：
 | ![Error](images/demo_imdb_error.png) <br> *因 IMDb 反爬蟲機制或結構變更導致空結果* | ![Fixed](images/demo_imdb_fix.png) <br> *點擊「AI 自動修正」後，AI 修正邏輯成功抓取資料* |
 
 
+
+## 🏗️ 技術架構與成本優化 (Architecture)
+
+為什麼 SmartScraper 能在極低成本下 ($0.06/run) 處理大型網頁？秘密在於 **這不是直接把 HTML 丟給 AI**，而是設計了一個 **三層漏斗 (Triple-Funnel)** 過濾機制：
+
+### 1. 瀏覽器層 (Browser Layer) - **DOM 瘦身**
+在 Playwright 渲染網頁時，直接注入 JavaScript 進行預處理：
+- **移除雜訊**: 自動刪除 `<script>`, `<style>`, `<svg>`, `<iframe>` 等對 AI 無用的標籤。
+- **結構提取**: 透過 DOM 遍歷演算法，只保留前 50 個有意義的結構元素 (Table, List, Main Content)，將 5MB 的原始 HTML 壓縮成 <50KB 的精簡骨架。
+
+### 2. 分析層 (Analyzer Agent) - **gpt-5.2-chat**
+- 接收精簡後的 HTML 骨架。
+- 專注於 **"語意理解"**：判斷哪個 `div` 是商品列表、哪個 `span` 是價格。
+- 產出 JSON 格式的 Selectors 規格書。
+
+### 3. 生成層 (Generator Agent) - **gpt-5.1-codex-max**
+- **完全不看 HTML**，只看 Analyzer 產出的 JSON 規格。
+- 專注於 **"程式碼邏輯"**：寫出強健的 Python 程式碼和錯誤處理。
+
+👉 **結果**：即使是大型新聞網站，也能將 Token 消耗控制在極低範圍，同時保持高準確度。
 
 ## API 自動切換
 
@@ -106,7 +126,7 @@ SmartScraper/
 ├── browser/
 │   └── playwright_client.py   # 瀏覽器封裝
 ├── agents/
-│   ├── openai_client.py       # Azure OpenAI 統一客戶端 (MAF Responses API)
+│   ├── openai_client.py       # Azure OpenAI 統一客戶端 (Microsoft Agent Framework Responses API)
 │   ├── analyzer.py            # 頁面分析 (gpt-5.2-chat)
 │   └── generator.py           # 程式碼生成 (gpt-5.1-codex-max)
 └── sandbox/

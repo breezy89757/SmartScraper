@@ -106,8 +106,19 @@ class AzureOpenAIClient:
         
         response = await agent.run(user_msg)
         
+        # 提取 Token 用量 (MAF 使用 usage_details)
+        usage = None
+        if hasattr(response, "usage_details") and response.usage_details:
+             ud = response.usage_details
+             usage = {
+                 "prompt_tokens": getattr(ud, "input_token_count", 0),
+                 "completion_tokens": getattr(ud, "output_token_count", 0),
+                 "total_tokens": getattr(ud, "total_token_count", 0)
+             }
+        
         return ChatResponse(
             content=str(response),
+            usage=usage,
             api_type="maf_responses"
         )
     

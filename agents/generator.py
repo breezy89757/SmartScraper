@@ -20,6 +20,7 @@ class GeneratedCode:
     code: str                    # Python 程式碼
     imports: list                # 需要的 imports
     explanation: str             # 程式碼說明
+    usage: Optional[dict] = None # Token 用量
 
 
 class ScraperGenerator:
@@ -110,7 +111,8 @@ class ScraperGenerator:
         return GeneratedCode(
             code=data.get("code", ""),
             imports=data.get("imports", []),
-            explanation=data.get("explanation", "")
+            explanation=data.get("explanation", ""),
+            usage=response.usage
         )
     
     async def close(self):

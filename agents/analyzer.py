@@ -20,7 +20,9 @@ class AnalysisResult:
     target_description: str      # 目標描述
     suggested_selectors: list    # 建議的 CSS selectors
     data_structure: dict         # 預期資料結構
+    data_structure: dict         # 預期資料結構
     page_type: str               # 頁面類型 (表格、列表、單頁等)
+    usage: Optional[dict] = None # Token 用量
 
 
 class PageAnalyzer:
@@ -69,7 +71,7 @@ class PageAnalyzer:
 使用者目標: {user_goal}
 
 網頁結構:
-{simplified_html[:3000]}
+{simplified_html[:60000]}
 
 請分析並給出 JSON 格式的回應。"""
 
@@ -132,7 +134,8 @@ class PageAnalyzer:
             target_description=data.get("target_description", ""),
             suggested_selectors=data.get("suggested_selectors", []),
             data_structure=data.get("data_structure", {}),
-            page_type=data.get("page_type", "other")
+            page_type=data.get("page_type", "other"),
+            usage=response.usage
         )
     
     async def close(self):

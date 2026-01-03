@@ -159,6 +159,9 @@ async def generate_scraper(request: GenerateRequest):
     print(f"🔍 建議 Selectors: {analysis.suggested_selectors}")
     print(f"📐 預期資料結構: {analysis.data_structure}")
     print(f"📄 頁面類型: {analysis.page_type}")
+
+    if analysis.usage:
+        print(f"💰 Analyzer Usage: {analysis.usage}")
     print("="*50 + "\n")
     
     # Step 3: 生成程式碼
@@ -171,6 +174,9 @@ async def generate_scraper(request: GenerateRequest):
             data_structure=analysis.data_structure,
             page_type=analysis.page_type
         )
+        
+        if code_result.usage:
+            print(f"💰 Generator Usage: {code_result.usage}")
         
         return {
             "analysis": {
@@ -267,6 +273,9 @@ async def fix_code(request: FixRequest):
             ],
             temperature=0.2
         )
+        
+        if response.usage:
+            print(f"💰 Fixer Usage: {response.usage}")
 
         # 提取程式碼
         content = response.content.strip()
