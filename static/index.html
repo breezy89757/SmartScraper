@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartScraper - AI 爬蟲生成器</title>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .input-section {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--bg-tertiary);
+            border: 1px solid transparent;
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: var(--bg-tertiary);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result-section {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            color: var(--success);
+        }
+
+        .copy-btn {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .code-block {
+            background: #282c34;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .code-block pre {
+            padding: 20px;
+            overflow-x: auto;
+            margin: 0;
+        }
+
+        .code-block code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .explanation {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-msg {
+            color: var(--error);
+            padding: 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 10px;
+            margin-top: 16px;
+        }
+
+        .steps {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            flex: 1;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .step.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .step.done {
+            background: var(--success);
+            color: white;
+        }
+
+        .code-editor {
+            width: 100%;
+            min-height: 400px;
+            padding: 16px;
+            background: #282c34;
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 10px;
+            color: #abb2bf;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            resize: vertical;
+            tab-size: 4;
+        }
+
+        .code-editor:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🕷️ SmartScraper</h1>
+            <p class="subtitle">輸入網址 + 目標，AI 自動產生 Python 爬蟲程式碼</p>
+        </header>
+
+        <div class="input-section">
+            <div class="form-group">
+                <label for="url">目標網址</label>
+                <input type="url" id="url" placeholder="https://www.example.com" value="https://www.stockq.org/">
+            </div>
+
+            <div class="form-group">
+                <label for="goal">想要抓取什麼？</label>
+                <textarea id="goal" placeholder="例如：抓取美元指數和美元/日圓的價格">抓取美元指數和美元/日圓的價格</textarea>
+            </div>
+
+            <button class="btn btn-primary" id="generateBtn" onclick="generate()">
+                🚀 生成爬蟲程式碼
+            </button>
+        </div>
+
+        <div class="steps" id="steps" style="display: none;">
+            <div class="step" id="step1">1. 載入網頁</div>
+            <div class="step" id="step2">2. AI 分析</div>
+            <div class="step" id="step3">3. 生成程式碼</div>
+        </div>
+
+        <!-- 錯誤訊息 (置頂，步驟之後) -->
+        <div class="error-msg" id="error" style="display: none;"></div>
+
+        <div class="result-section" id="result">
+            <div class="result-header">
+                <span class="result-title">✅ 生成完成</span>
+                <div>
+                    <button class="btn copy-btn" onclick="copyCode()">📋 複製程式碼</button>
+                    <button class="btn btn-primary" id="runBtn" onclick="runCode()" style="margin-left: 8px;">▶️
+                        執行程式碼</button>
+                </div>
+            </div>
+
+            <!-- 執行結果區域 (置頂顯示) -->
+            <div id="execResult"
+                style="display: none; margin-bottom: 16px; padding: 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1)); border-radius: 12px; border: 1px solid var(--success);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-weight: 600; color: var(--success); font-size: 1.1rem;">📊 執行結果</span>
+                    <button class="btn btn-primary" id="fixBtn" onclick="fixWithAI()"
+                        style="display: none; background: var(--warning);">🔧 AI 自動修正</button>
+                </div>
+                <div class="code-block">
+                    <pre><code class="language-json" id="execOutput"></code></pre>
+                </div>
+            </div>
+
+            <!-- 程式碼編輯區 (可編輯) -->
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">💡 可直接編輯程式碼後再執行</span>
+                </div>
+                <textarea id="codeEditor" class="code-editor" spellcheck="false"></textarea>
+            </div>
+
+            <div class="explanation" id="explanation"></div>
+        </div>
+    </div>
+
+    <script>
+        async function generate() {
+            const url = document.getElementById('url').value.trim();
+            const goal = document.getElementById('goal').value.trim();
+
+            if (!url || !goal) {
+                showError('請填寫網址和目標');
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            const steps = document.getElementById('steps');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+
+            // Reset
+            btn.disabled = true;
+            btn.textContent = '⏳ 處理中...';
+            steps.style.display = 'flex';
+            result.classList.remove('show');
+            error.style.display = 'none';
+
+            // 清除上一次的執行結果
+            const execResult = document.getElementById('execResult');
+            const execOutput = document.getElementById('execOutput');
+            const fixBtn = document.getElementById('fixBtn');
+
+            if (execResult) execResult.style.display = 'none';
+            if (execOutput) execOutput.textContent = '';
+            if (fixBtn) fixBtn.style.display = 'none';
+
+            // Step 1
+            setStep(1);
+
+            try {
+                // Step 2
+                await sleep(500);
+                setStep(2);
+
+                // Call API
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, goal, use_vision: true })
+                });
+
+                // Step 3
+                setStep(3);
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || '生成失敗');
+                }
+
+                const data = await response.json();
+
+                // Show result - 使用 textarea 編輯器
+                document.getElementById('codeEditor').value = data.generated_code || 'No code generated';
+                document.getElementById('explanation').textContent = data.explanation || '';
+
+                result.classList.add('show');
+                setStepDone();
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 生成爬蟲程式碼';
+            }
+        }
+
+        // 設計原則：只有當前步驟亮起 (active)
+        // 已完成步驟顯示為暗色已完成狀態 (done)
+        // 未開始步驟維持灰色預設
+        function setStep(n) {
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById('step' + i);
+                el.classList.remove('active', 'done');
+
+                if (i < n) {
+                    // 已完成步驟 - 暗色
+                    el.classList.add('done');
+                } else if (i === n) {
+                    // 當前步驟 - 亮起
+                    el.classList.add('active');
+                }
+                // i > n: 未開始 - 保持預設灰色
+            }
+        }
+
+        function setStepDone() {
+            // 全部完成時，只有最後一步亮著
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById('step' + i);
+                el.classList.remove('active', 'done');
+                if (i < 3) {
+                    el.classList.add('done');
+                } else {
+                    el.classList.add('done'); // 全部完成
+                }
+            }
+        }
+
+        function showError(msg) {
+            const error = document.getElementById('error');
+            error.textContent = '❌ ' + msg;
+            error.style.display = 'block';
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeEditor').value;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ 已複製';
+                setTimeout(() => btn.textContent = '📋 複製程式碼', 2000);
+            });
+        }
+
+        // 檢查結果是否無效（需要 AI 修正）
+        function isResultInvalid(data) {
+            // 空陣列
+            if (Array.isArray(data) && data.length === 0) return true;
+
+            // 陣列中所有物件的值都是 null
+            if (Array.isArray(data) && data.length > 0) {
+                return data.every(item => {
+                    if (typeof item !== 'object' || item === null) return false;
+                    return Object.values(item).every(v => v === null);
+                });
+            }
+
+            // 單一物件，所有值都是 null
+            if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+                return Object.values(data).every(v => v === null);
+            }
+
+            return false;
+        }
+
+        function sleep(ms) {
+            return new Promise(r => setTimeout(r, ms));
+        }
+
+        // 儲存目前的 URL 供執行時使用
+        let currentUrl = '';
+
+        // 在 generate 成功後儲存 URL
+        const originalGenerate = generate;
+        generate = async function () {
+            currentUrl = document.getElementById('url').value.trim();
+            return originalGenerate();
+        };
+
+        // 執行程式碼 (沙箱)
+        async function runCode() {
+            // 使用編輯器中的程式碼 (使用者可能已修改)
+            const code = document.getElementById('codeEditor').value;
+            const url = currentUrl || document.getElementById('url').value.trim();
+
+            if (!code || !code.trim()) {
+                showError('沒有程式碼可執行');
+                return;
+            }
+
+            const runBtn = document.getElementById('runBtn');
+            const errorDiv = document.getElementById('error');
+
+            runBtn.disabled = true;
+            runBtn.textContent = '⏳ 執行中...';
+
+            // 清除之前的錯誤訊息
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+
+            try {
+                const response = await fetch('/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, url })
+                });
+
+                // 先取得文字，避免 JSON 解析失敗
+                const text = await response.text();
+                let data;
+
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    // 如果不是 JSON (例如 500 錯誤頁面)，將其視為錯誤訊息
+                    throw new Error(text.substring(0, 200) || 'Server returned invalid response');
+                }
+
+                const execResult = document.getElementById('execResult');
+                const execOutput = document.getElementById('execOutput');
+                const fixBtn = document.getElementById('fixBtn');
+
+                if (data.success) {
+                    execOutput.textContent = JSON.stringify(data.data, null, 2);
+                    execResult.style.display = 'block';
+                    hljs.highlightAll();
+
+                    // 檢查結果是否「無效」：空陣列或所有值都是 null
+                    const needsFix = isResultInvalid(data.data);
+
+                    if (needsFix) {
+                        fixBtn.style.display = 'inline-block';
+                        execResult.style.borderColor = 'var(--warning)';
+                    } else {
+                        fixBtn.style.display = 'none';
+                        execResult.style.borderColor = 'var(--success)';
+                    }
+                } else {
+                    // 執行有明確的錯誤 (data.success = false)
+                    showError('執行失敗: ' + data.error);
+
+                    // 顯示錯誤在結果區，以便 AI 修正
+                    execOutput.textContent = "Error: " + data.error;
+                    execResult.style.display = 'block';
+                    execResult.style.borderColor = 'var(--error)';
+                    fixBtn.style.display = 'inline-block';
+                }
+
+            } catch (err) {
+                // 處理網路錯誤或解析錯誤
+                showError('執行錯誤: ' + err.message);
+
+                const execResult = document.getElementById('execResult');
+                const execOutput = document.getElementById('execOutput');
+                const fixBtn = document.getElementById('fixBtn');
+
+                execOutput.textContent = "System Error: " + err.message;
+                execResult.style.display = 'block';
+                execResult.style.borderColor = 'var(--error)';
+                fixBtn.style.display = 'inline-block';
+            } finally {
+                runBtn.disabled = false;
+                runBtn.textContent = '▶️ 執行程式碼';
+            }
+        }
+
+        // AI 自動修正
+        async function fixWithAI() {
+            const code = document.getElementById('codeEditor').value;
+            const url = currentUrl || document.getElementById('url').value.trim();
+            const goal = document.getElementById('goal').value.trim();
+            const execOutput = document.getElementById('execOutput').textContent;
+
+            const fixBtn = document.getElementById('fixBtn');
+            fixBtn.disabled = true;
+            fixBtn.textContent = '🔧 AI 修正中...';
+
+            try {
+                const response = await fetch('/fix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        original_code: code,
+                        url,
+                        goal,
+                        execution_result: execOutput
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('修正失敗');
+                }
+
+                const data = await response.json();
+
+                // 更新編輯器中的程式碼
+                document.getElementById('codeEditor').value = data.fixed_code;
+
+                // 自動執行修正後的程式碼
+                await runCode();
+
+            } catch (err) {
+                showError('AI 修正失敗: ' + err.message);
+            } finally {
+                fixBtn.disabled = false;
+                fixBtn.textContent = '🔧 AI 自動修正';
+            }
+        }
+    </script>
+</body>
+
+</html>
