@@ -42,7 +42,7 @@ The system follows a 3-stage funnel designed for stability and cost-efficiency:
 ### Setup
 1.  Clone repository:
     ```bash
-    git clone https://github.com/breez/SmartScraper.git
+    git clone https://github.com/breezy89757/SmartScraper.git
     cd SmartScraper
     ```
 2.  Install dependencies (using `uv` is recommended):
