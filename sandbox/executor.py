@@ -44,31 +44,36 @@ def create_safe_globals() -> Dict:
     """
     建立安全的 globals 環境
     """
-    import requests
-    from bs4 import BeautifulSoup
-    import json
-    import re
-    from datetime import datetime
     import builtins
     
-    # 允許的模組 (常用爬蟲模組)
-    allowed_imports = {
-        "requests": requests,
-        "bs4": __import__("bs4"),
-        "json": json,
-        "re": re,
-        "datetime": __import__("datetime"),
-        "time": __import__("time"),
-        "typing": __import__("typing"),  # 型別提示
-        "collections": __import__("collections"),
-        "urllib": __import__("urllib"),
+    # 允許的模組清單 (支援子模組字串比對)
+    ALLOWED_IMPORTS = {
+        "requests",
+        "bs4",
+        "json",
+        "re",
+        "datetime",
+        "time",
+        "typing",
+        "collections",
+        "urllib",
+        "urllib.parse",
+        "urllib.request",
+        "urllib.error",
+        "math",
+        "random"
     }
     
     # 受限的 __import__
-    def safe_import(name, *args, **kwargs):
-        if name in allowed_imports:
-            return allowed_imports[name]
-        raise ImportError(f"模組 '{name}' 不在白名單中")
+    def safe_import(name, globals=None, locals=None, fromlist=(), level=0):
+        # 處理 name (e.g., 'urllib.parse')
+        base_name = name.split('.')[0]
+        
+        if name in ALLOWED_IMPORTS or base_name in ALLOWED_IMPORTS:
+            # 這是安全的，呼叫原始 __import__
+            return __import__(name, globals, locals, fromlist, level)
+        
+        raise ImportError(f"Sandbox Restriction: Module '{name}' is not allowed.")
     
     # 建立受限的 builtins
     safe_builtins = {}
@@ -82,9 +87,16 @@ def create_safe_globals() -> Dict:
     # 加入受限的 __import__
     safe_builtins["__import__"] = safe_import
     
+    # 預先匯入常用模組方便使用 (Optional, 但為了相容性保留)
+    import requests
+    from bs4 import BeautifulSoup
+    import json
+    import re
+    from datetime import datetime
+    
     return {
         "__builtins__": safe_builtins,
-        "__name__": "__main__",  # 讓 if __name__ == "__main__" 可以執行
+        "__name__": "__main__",
         "requests": requests,
         "BeautifulSoup": BeautifulSoup,
         "json": json,

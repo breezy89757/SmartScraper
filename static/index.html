@@ -264,6 +264,44 @@
             outline: none;
             border-color: var(--accent);
         }
+
+        .fix-feedback-panel {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .fix-feedback-input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .fix-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -277,12 +315,13 @@
         <div class="input-section">
             <div class="form-group">
                 <label for="url">目標網址</label>
-                <input type="url" id="url" placeholder="https://www.example.com" value="https://www.stockq.org/">
+                <input type="url" id="url" placeholder="https://www.example.com"
+                    value="https://www.ptt.cc/bbs/Gossiping/index.html">
             </div>
 
             <div class="form-group">
                 <label for="goal">想要抓取什麼？</label>
-                <textarea id="goal" placeholder="例如：抓取美元指數和美元/日圓的價格">抓取美元指數和美元/日圓的價格</textarea>
+                <textarea id="goal" placeholder="例如：抓取文章標題、作者和推文數">抓取首頁所有文章的標題、作者、日期以及推文數</textarea>
             </div>
 
             <button class="btn btn-primary" id="generateBtn" onclick="generate()">
@@ -303,6 +342,8 @@
             <div class="result-header">
                 <span class="result-title">✅ 生成完成</span>
                 <div>
+                    <button class="btn copy-btn" onclick="downloadProject()" style="margin-right: 8px;">📦 下載部署包
+                        (ZIP)</button>
                     <button class="btn copy-btn" onclick="copyCode()">📋 複製程式碼</button>
                     <button class="btn btn-primary" id="runBtn" onclick="runCode()" style="margin-left: 8px;">▶️
                         執行程式碼</button>
@@ -312,13 +353,26 @@
             <!-- 執行結果區域 (置頂顯示) -->
             <div id="execResult"
                 style="display: none; margin-bottom: 16px; padding: 16px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1)); border-radius: 12px; border: 1px solid var(--success);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-weight: 600; color: var(--success); font-size: 1.1rem;">📊 執行結果</span>
-                    <button class="btn btn-primary" id="fixBtn" onclick="fixWithAI()"
-                        style="display: none; background: var(--warning);">🔧 AI 自動修正</button>
+                <div class="result-header">
+                    <strong>📊 執行結果</strong>
+                    <button class="btn btn-primary" id="fixBtn" onclick="toggleFixPanel()">🔧 AI 自動修正</button>
                 </div>
                 <div class="code-block">
                     <pre><code class="language-json" id="execOutput"></code></pre>
+                </div>
+
+                <!-- 修正回饋面板 -->
+                <div class="fix-feedback-panel" id="fixPanel">
+                    <div style="margin-bottom: 8px; font-size: 0.9em; color: var(--text-secondary);">
+                        💡 <strong>提示:</strong> 請告訴 AI 哪裡需要改進 (例如: "抓不到匯率" 或 "欄位名稱錯誤")，這能大幅提升修正準確率。
+                    </div>
+                    <input type="text" class="fix-feedback-input" id="fixFeedbackInput"
+                        placeholder="請輸入修正指示 (選填，例如: 缺少美元指數)...">
+                    <div class="fix-actions">
+                        <button class="btn" style="background: transparent; border: 1px solid var(--border-color);"
+                            onclick="toggleFixPanel()">取消</button>
+                        <button class="btn btn-primary" onclick="submitFix()">確認修正</button>
+                    </div>
                 </div>
             </div>
 
@@ -360,10 +414,13 @@
             const execResult = document.getElementById('execResult');
             const execOutput = document.getElementById('execOutput');
             const fixBtn = document.getElementById('fixBtn');
+            const fixPanel = document.getElementById('fixPanel');
+
 
             if (execResult) execResult.style.display = 'none';
             if (execOutput) execOutput.textContent = '';
             if (fixBtn) fixBtn.style.display = 'none';
+            if (fixPanel) fixPanel.style.display = 'none'; // Hide fix panel on new generation
 
             // Step 1
             setStep(1);
@@ -500,6 +557,8 @@
 
             const runBtn = document.getElementById('runBtn');
             const errorDiv = document.getElementById('error');
+            const fixBtn = document.getElementById('fixBtn');
+            const fixPanel = document.getElementById('fixPanel');
 
             runBtn.disabled = true;
             runBtn.textContent = '⏳ 執行中...';
@@ -507,6 +566,8 @@
             // 清除之前的錯誤訊息
             errorDiv.style.display = 'none';
             errorDiv.textContent = '';
+            fixPanel.style.display = 'none'; // Hide fix panel if it was open
+            fixBtn.style.display = 'inline-block'; // Show fix button again
 
             try {
                 const response = await fetch('/execute', {
@@ -528,7 +589,7 @@
 
                 const execResult = document.getElementById('execResult');
                 const execOutput = document.getElementById('execOutput');
-                const fixBtn = document.getElementById('fixBtn');
+
 
                 if (data.success) {
                     execOutput.textContent = JSON.stringify(data.data, null, 2);
@@ -538,12 +599,19 @@
                     // 檢查結果是否「無效」：空陣列或所有值都是 null
                     const needsFix = isResultInvalid(data.data);
 
+                    // 無論結果如何，都顯示修正按鈕 (因為 User 可能覺得抓錯資料但程式沒報錯)
+                    fixBtn.style.display = 'inline-block';
+
                     if (needsFix) {
-                        fixBtn.style.display = 'inline-block';
+                        // 雖然還有改善空間，但至少 User 有選擇
                         execResult.style.borderColor = 'var(--warning)';
+                        fixBtn.style.background = 'var(--warning)';
+                        fixBtn.textContent = '🔧 AI 自動修正 (偵測到空值)';
                     } else {
-                        fixBtn.style.display = 'none';
+                        // 看起來成功，但也許 User 不滿意
                         execResult.style.borderColor = 'var(--success)';
+                        fixBtn.style.background = 'var(--bg-tertiary)'; // 低調一點
+                        fixBtn.textContent = '🔧 AI 修正程式碼';
                     }
                 } else {
                     // 執行有明確的錯誤 (data.success = false)
@@ -553,7 +621,10 @@
                     execOutput.textContent = "Error: " + data.error;
                     execResult.style.display = 'block';
                     execResult.style.borderColor = 'var(--error)';
+
                     fixBtn.style.display = 'inline-block';
+                    fixBtn.style.background = 'var(--error)';
+                    fixBtn.textContent = '🔧 AI 修復錯誤';
                 }
 
             } catch (err) {
@@ -574,16 +645,39 @@
             }
         }
 
-        // AI 自動修正
-        async function fixWithAI() {
+        // 切換修正面板顯示
+        function toggleFixPanel() {
+            const panel = document.getElementById('fixPanel');
+            const btn = document.getElementById('fixBtn');
+            const isVisible = panel.style.display === 'block';
+
+            if (isVisible) {
+                panel.style.display = 'none';
+                btn.style.display = 'inline-block';
+            } else {
+                panel.style.display = 'block';
+                btn.style.display = 'none'; // 隱藏按鈕避免重複點擊
+                document.getElementById('fixFeedbackInput').focus();
+            }
+        }
+
+        // 提交 AI 修正
+        async function submitFix() {
+            const userFeedback = document.getElementById('fixFeedbackInput').value;
             const code = document.getElementById('codeEditor').value;
             const url = currentUrl || document.getElementById('url').value.trim();
             const goal = document.getElementById('goal').value.trim();
             const execOutput = document.getElementById('execOutput').textContent;
 
             const fixBtn = document.getElementById('fixBtn');
+            const fixPanel = document.getElementById('fixPanel');
+
+            // UI 狀態更新
+            fixPanel.style.display = 'none'; // 關閉面板
+            fixBtn.style.display = 'inline-block'; // 重新顯示按鈕
             fixBtn.disabled = true;
-            fixBtn.textContent = '🔧 AI 修正中...';
+            fixBtn.innerHTML = '⏳ 思考中...';
+            document.getElementById('fixFeedbackInput').value = ''; // Clear input after submission
 
             try {
                 const response = await fetch('/fix', {
@@ -593,12 +687,14 @@
                         original_code: code,
                         url,
                         goal,
-                        execution_result: execOutput
+                        execution_result: execOutput,
+                        user_feedback: userFeedback || ""
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error('修正失敗');
+                    const err = await response.json();
+                    throw new Error(err.detail || '修正失敗');
                 }
 
                 const data = await response.json();
@@ -614,6 +710,72 @@
             } finally {
                 fixBtn.disabled = false;
                 fixBtn.textContent = '🔧 AI 自動修正';
+            }
+        }
+
+        // 下載專案包
+        async function downloadProject() {
+            const code = document.getElementById('codeEditor').value;
+
+            if (!code || !code.trim()) {
+                showError('沒有程式碼可下載');
+                return;
+            }
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: code,
+                        url: currentUrl || document.getElementById('url').value.trim(),
+                        filename: 'scraper'
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+
+                    // Extract filename from Content-Disposition header
+                    let filename = "SmartScraper_Package.zip";
+                    const disposition = response.headers.get('Content-Disposition');
+
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        // 嘗試 1: Regex (針對 filename="...")
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        } else {
+                            // 嘗試 2: 簡單 Split (針對 filename=...)
+                            const parts = disposition.split('filename=');
+                            if (parts.length > 1) {
+                                filename = parts[1].split(';')[0].replace(/['"]/g, '').trim();
+                            }
+                        }
+                    }
+
+                    // 防呆：如果還是空的，給預設值
+                    if (!filename || filename.trim() === "") {
+                        filename = "SmartScraper_Package.zip";
+                    }
+
+                    console.log("[SmartScraper] Download Filename:", filename, "Header:", disposition);
+
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    const err = await response.json();
+                    showError('下載失敗: ' + (err.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                showError('下載錯誤: ' + err.message);
             }
         }
     </script>

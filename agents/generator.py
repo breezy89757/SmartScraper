@@ -115,6 +115,54 @@ class ScraperGenerator:
             usage=response.usage
         )
     
+    async def fix_code(self, original_code: str, url: str, goal: str, error: str, user_feedback: str = "") -> str:
+        """
+        修正爬蟲程式碼
+        """
+        system_prompt = """你是一個 Python 爬蟲專家。使用者的爬蟲程式碼執行後返回空結果或錯誤。
+請分析問題並修正程式碼。
+
+規則：
+1. 保持 scrape(url) 函數結構
+2. 修正 CSS selector 或資料提取邏輯
+3. 只輸出修正後的完整程式碼，不要解釋
+4. 使用 requests + BeautifulSoup
+5. 優先參考使用者的額外指示（如果有的話）"""
+
+        user_prompt = f"""目標網址: {url}
+使用者目標: {goal}
+
+原始程式碼:
+```python
+{original_code}
+```
+
+執行結果:
+{error}
+
+使用者額外指示 (Feedback):
+{user_feedback if user_feedback else "無"}
+
+請求:
+請根據上述執行結果和指示修正程式碼。
+1. 若結果為 Null/空，請檢查 CSS Selector。
+2. 若有 Exception，請修復語法或邏輯。
+3. 確保符合沙箱安全限制 (僅用 requests, bs4, urllib, json)。"""
+
+        response = await self._client.chat(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2
+        )
+        
+        # 提取程式碼
+        content = response.content.strip()
+        import re
+        code_match = re.search(r'```python\s*(.*?)\s*```', content, re.DOTALL)
+        return code_match.group(1) if code_match else content
+
     async def close(self):
         await self._client.close()
 

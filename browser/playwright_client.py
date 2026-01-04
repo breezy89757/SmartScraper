@@ -62,7 +62,7 @@ class PlaywrightClient:
                 await page.goto(url, wait_until="domcontentloaded", timeout=60000)
                 
                 # 等待頁面穩定
-                await page.wait_for_timeout(2000)
+                await page.wait_for_timeout(3000)
                 
                 # 取得基本資訊
                 title = await page.title()
@@ -112,8 +112,8 @@ class PlaywrightClient:
                 // 簡化 - 只保留前 50 個有意義的元素
                 const meaningful = [];
                 const walk = (el, depth = 0) => {
-                    if (meaningful.length >= 50) return;
-                    if (depth > 5) return;
+                    if (meaningful.length >= 300) return;
+                    if (depth > 8) return;
                     
                     const tag = el.tagName?.toLowerCase();
                     if (!tag) return;
